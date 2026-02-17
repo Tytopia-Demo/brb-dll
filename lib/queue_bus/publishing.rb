@@ -37,6 +37,10 @@ module QueueBus
       if defined?(Time) && Time.respond_to?(:zone) && Time.zone
         bus_attr['bus_timezone']     = Time.zone.name
       end
+
+      # Inject telemetry context into event attributes
+      bus_attr = ::QueueBus::Telemetry.inject_into_attributes(bus_attr)
+
       out = bus_attr.merge(attributes || {})
       ::QueueBus.before_publish_callback(out)
       out
@@ -57,7 +61,13 @@ module QueueBus
     def publish(event_type, attributes = {})
       to_publish = publish_metadata(event_type, attributes)
 
-      ::QueueBus.log_application("Event published: #{event_type} #{to_publish.inspect}")
+      log_context = {
+        event_type: event_type,
+        bus_id: to_publish['bus_id'],
+        attributes: to_publish
+      }
+      ::QueueBus.log_application("Event published: #{event_type}", log_context)
+
       if local_mode
         ::QueueBus::Local.publish(to_publish) # TODO: use different adapters
       else
@@ -71,7 +81,14 @@ module QueueBus
       to_publish.delete('bus_published_at') unless attributes['bus_published_at'] # will be put on when it actually does it
       to_publish['bus_class_proxy'] = ::QueueBus::Publisher.name.to_s
 
-      ::QueueBus.log_application("Event published:#{event_type} #{to_publish.inspect} publish_at: #{timestamp_or_epoch.to_i}")
+      log_context = {
+        event_type: event_type,
+        bus_id: to_publish['bus_id'],
+        publish_at: timestamp_or_epoch.to_i,
+        attributes: to_publish
+      }
+      ::QueueBus.log_application("Event scheduled for publishing: #{event_type}", log_context)
+
       delayed_enqueue_to(timestamp_or_epoch.to_i, incoming_queue, ::QueueBus::Worker, to_publish)
     end
 

@@ -6,6 +6,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Unified Logging Framework** with structured JSON logging support
+- **StructuredLogger** class for consistent log formatting with metadata enrichment
+- **Telemetry Context Tracking** (request_id, trace_id, user_id, session_id)
+- **TelemetryMiddleware** to preserve context across async operations
+- **Telemetry module** for managing and propagating telemetry context
+- Context injection into event attributes for request correlation
+- Context extraction and restoration in workers
+- Configurable log formatters for different environments
+- Service name, environment, and version metadata in logs
+- Methods to enable/disable structured logging: `enable_structured_logging!` and `disable_structured_logging!`
+- Convenience methods for setting and getting telemetry context: `set_request_id`, `set_trace_id`, `set_user_id`, `set_session_id`
+- `with_telemetry_context` method for scoped context execution
+- Comprehensive logging documentation in LOGGING.md
+
+### Changed
+
+- Updated `log_application` and `log_worker` methods to support structured logging with context
+- Enhanced event publishing to include telemetry context in attributes
+- Improved log statements throughout codebase to use structured format with context
+- Updated all worker classes (Driver, Rider, Publisher, Local) to log with structured context
+
+### Backward Compatibility
+
+- Structured logging is disabled by default for backward compatibility
+- Plain text logging continues to work as before
+- All existing functionality preserved without breaking changes
+
 ## [0.13.2]
 
 ### Fixes

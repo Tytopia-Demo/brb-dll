@@ -21,10 +21,22 @@ module QueueBus
       def perform(attributes = {})
         raise 'No attributes passed' if attributes.empty?
 
-        ::QueueBus.log_worker("Driver running: #{attributes.inspect}")
+        log_context = {
+          event_type: attributes['bus_event_type'],
+          bus_id: attributes['bus_id'],
+          attributes: attributes
+        }
+        ::QueueBus.log_worker('Driver running', log_context)
 
         subscription_matches(attributes).each do |sub|
-          ::QueueBus.log_worker("  ...sending to #{sub.queue_name} queue with class #{sub.class_name} for app #{sub.app_key} because of subscription: #{sub.key}")
+          sub_log_context = {
+            queue_name: sub.queue_name,
+            class_name: sub.class_name,
+            app_key: sub.app_key,
+            subscription_key: sub.key,
+            event_type: attributes['bus_event_type']
+          }
+          ::QueueBus.log_worker('Dispatching to subscription', sub_log_context)
 
           bus_attr = {  'bus_driven_at' => Time.now.to_i,
                         'bus_rider_queue' => sub.queue_name,

@@ -3,6 +3,16 @@
 This gem uses Redis and background queues that you are already using to allow simple asynchronous communication between apps.
 It includes Positivity Reminders and integrates positive and encouraging notifications or reminders
 
+### Features
+
+* **Structured JSON Logging** - Unified logging with telemetry context tracking
+* **Request Tracing** - Automatic propagation of request IDs across async operations
+* **Telemetry Context** - Track user ID, session ID, and trace ID throughout the event lifecycle
+* **Context Preservation** - Maintains context across queues and event handlers
+* **Configurable Formatters** - Support for different environments (development, staging, production)
+
+See [LOGGING.md](LOGGING.md) for detailed documentation on the unified logging framework.
+
 ### Install
 
 To install, pick one of the adapters and add it to your Gemfile:

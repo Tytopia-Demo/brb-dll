@@ -6,16 +6,55 @@ require 'logger'
 module QueueBus
   # This class contains all the configuration for a running queue bus application.
   class Config
-    attr_accessor :default_queue, :hostname, :incoming_queue, :logger
-
+    attr_accessor :default_queue, :hostname, :incoming_queue
     attr_reader :worker_middleware_stack
     attr_writer :local_mode, :context
+
+    # Structured logging configuration
+    attr_accessor :structured_logging_enabled, :service_name, :log_environment, :log_version
 
     def initialize
       @worker_middleware_stack = QueueBus::Middleware::Stack.new
       @incoming_queue = 'bus_incoming'
       @hostname = Socket.gethostname
+      @structured_logging_enabled = false
+      @service_name = 'queue-bus'
+      @log_environment = nil
+      @log_version = nil
+
+      # Register telemetry middleware by default
+      @worker_middleware_stack.use(QueueBus::TelemetryMiddleware)
     end
+
+    # Get or set the logger
+    def logger=(logger_instance)
+      @logger = logger_instance
+      @structured_logger = nil # Reset structured logger when logger changes
+    end
+
+    def logger
+      @logger
+    end
+
+    # Get the structured logger instance
+    def structured_logger
+      @structured_logger ||= create_structured_logger
+    end
+
+    private
+
+    def create_structured_logger
+      return nil unless @logger
+
+      QueueBus::StructuredLogger.new(
+        @logger,
+        service_name: @service_name,
+        environment: @log_environment,
+        version: @log_version
+      )
+    end
+
+    public
 
     # A wrapper that is always "truthy" but can contain an inner value. This is useful for
     # checking that a thread local variable is set to a value, even if that value happens to
@@ -110,12 +149,35 @@ module QueueBus
       @before_publish_callback&.call(attributes)
     end
 
-    def log_application(message)
-      logger&.info(message)
+    def log_application(message, context = {})
+      if @structured_logging_enabled && structured_logger
+        structured_logger.info(message, context)
+      else
+        logger&.info(message)
+      end
     end
 
-    def log_worker(message)
-      logger&.debug(message)
+    def log_worker(message, context = {})
+      if @structured_logging_enabled && structured_logger
+        structured_logger.debug(message, context)
+      else
+        logger&.debug(message)
+      end
+    end
+
+    # Enable structured JSON logging
+    def enable_structured_logging!(service_name: 'queue-bus', environment: nil, version: nil)
+      @structured_logging_enabled = true
+      @service_name = service_name
+      @log_environment = environment
+      @log_version = version
+      @structured_logger = nil # Force recreation with new settings
+    end
+
+    # Disable structured JSON logging (revert to plain text)
+    def disable_structured_logging!
+      @structured_logging_enabled = false
+      @structured_logger = nil
     end
   end
 end
