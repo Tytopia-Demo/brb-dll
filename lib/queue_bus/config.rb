@@ -7,6 +7,7 @@ module QueueBus
   # This class contains all the configuration for a running queue bus application.
   class Config
     attr_accessor :default_queue, :hostname, :incoming_queue, :logger
+    attr_accessor :structured_logging, :service_name, :environment, :log_version
 
     attr_reader :worker_middleware_stack
     attr_writer :local_mode, :context
@@ -15,6 +16,10 @@ module QueueBus
       @worker_middleware_stack = QueueBus::Middleware::Stack.new
       @incoming_queue = 'bus_incoming'
       @hostname = Socket.gethostname
+      @structured_logging = false # default to plain text for backwards compatibility
+      @service_name = nil
+      @environment = nil
+      @log_version = nil
     end
 
     # A wrapper that is always "truthy" but can contain an inner value. This is useful for
@@ -110,12 +115,39 @@ module QueueBus
       @before_publish_callback&.call(attributes)
     end
 
-    def log_application(message)
-      logger&.info(message)
+    # Get structured logger instance
+    def structured_logger
+      @structured_logger ||= begin
+        if @structured_logging
+          ::QueueBus::StructuredLogger.new(
+            @logger,
+            service_name: @service_name,
+            environment: @environment,
+            version: @log_version
+          )
+        else
+          ::QueueBus::PlainTextLogger.new(@logger)
+        end
+      end
     end
 
-    def log_worker(message)
-      logger&.debug(message)
+    # Reset structured logger (useful when config changes)
+    def reset_logger!
+      @structured_logger = nil
+    end
+
+    def log_application(message, metadata = {})
+      structured_logger.info(message, metadata)
+    end
+
+    def log_worker(message, metadata = {})
+      structured_logger.debug(message, metadata)
+    end
+
+    # Get current telemetry context as hash
+    def telemetry_context
+      context = ::QueueBus::Telemetry.current_context
+      context&.to_h || {}
     end
   end
 end

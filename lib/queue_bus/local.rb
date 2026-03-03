@@ -6,7 +6,12 @@ module QueueBus
     class << self
       def publish(attributes = {})
         if ::QueueBus.local_mode == :suppress
-          ::QueueBus.log_worker("Suppressed: #{attributes.inspect}")
+          log_metadata = {
+            event_type: attributes['bus_event_type'],
+            bus_id: attributes['bus_id'],
+            mode: 'suppressed'
+          }
+          ::QueueBus.log_worker('Event suppressed in local mode', log_metadata)
           return # not doing anything
         end
 
@@ -14,7 +19,12 @@ module QueueBus
         json = ::QueueBus::Util.encode(attributes)
         attributes = ::QueueBus::Util.decode(json)
 
-        ::QueueBus.log_worker("Local running: #{attributes.inspect}")
+        log_metadata = {
+          event_type: attributes['bus_event_type'],
+          bus_id: attributes['bus_id'],
+          mode: ::QueueBus.local_mode
+        }
+        ::QueueBus.log_worker('Event processing in local mode', log_metadata)
 
         # looking for subscriptions, not queues
         subscription_matches(attributes).each do |sub|

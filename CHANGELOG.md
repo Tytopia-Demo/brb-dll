@@ -6,6 +6,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Unified Logging Framework**: Implemented structured JSON logging with telemetry context tracking for distributed tracing and improved observability
+  - Added `QueueBus::StructuredLogger` for JSON log output with metadata enrichment
+  - Added `QueueBus::PlainTextLogger` for backwards-compatible plain text logging
+  - Added `QueueBus::Telemetry` module for request ID, user ID, session ID, and trace ID tracking
+  - Telemetry context is automatically injected into published events and restored in workers
+  - All log entries now include configurable metadata: service name, environment, version, hostname
+  - Log methods (`log_application`, `log_worker`) now accept optional metadata hashes
+  - Added configuration options: `structured_logging`, `service_name`, `environment`, `log_version`
+  - Added telemetry context methods: `set_telemetry_context`, `update_telemetry_context`, `clear_telemetry_context`, `with_telemetry_context`
+  - Added `generate_request_id` method for generating unique request identifiers
+  - Added `reset_logger!` method to reinitialize logger with new configuration
+  - See [LOGGING.md](LOGGING.md) for complete documentation
+
+### Changed
+
+- Enhanced log output across all components to include structured metadata when enabled
+- Updated `publish_metadata` to inject telemetry context into event attributes
+- Updated `QueueBus::Worker` to restore telemetry context when processing events
+- Updated `QueueBus::Driver`, `QueueBus::Rider`, `QueueBus::Publisher`, and `QueueBus::Local` to use structured logging
+
+### Notes
+
+- All changes are **backwards compatible** - structured logging is disabled by default
+- Existing applications continue to work without any code changes
+- New features are opt-in through configuration
+
 ## [0.13.2]
 
 ### Fixes

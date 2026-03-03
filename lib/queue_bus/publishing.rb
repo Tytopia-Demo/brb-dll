@@ -31,6 +31,17 @@ module QueueBus
       bus_attr['bus_id']           = "#{Time.now.to_i}-#{generate_uuid}"
       bus_attr['bus_app_hostname'] = ::QueueBus.hostname
       bus_attr['bus_context'] = ::QueueBus.context unless ::QueueBus.context.nil?
+
+      # Add telemetry context for distributed tracing
+      telemetry_context = ::QueueBus::Telemetry.current_context
+      if telemetry_context
+        bus_attr['bus_request_id'] = telemetry_context.request_id if telemetry_context.request_id
+        bus_attr['bus_user_id'] = telemetry_context.user_id if telemetry_context.user_id
+        bus_attr['bus_session_id'] = telemetry_context.session_id if telemetry_context.session_id
+        bus_attr['bus_trace_id'] = telemetry_context.trace_id if telemetry_context.trace_id
+        bus_attr['bus_parent_span_id'] = telemetry_context.parent_span_id if telemetry_context.parent_span_id
+      end
+
       if defined?(I18n) && I18n.respond_to?(:locale) && I18n.locale
         bus_attr['bus_locale']       = I18n.locale.to_s
       end
@@ -57,7 +68,13 @@ module QueueBus
     def publish(event_type, attributes = {})
       to_publish = publish_metadata(event_type, attributes)
 
-      ::QueueBus.log_application("Event published: #{event_type} #{to_publish.inspect}")
+      log_metadata = {
+        event_type: event_type,
+        bus_id: to_publish['bus_id'],
+        event_attributes: attributes
+      }
+      ::QueueBus.log_application("Event published: #{event_type}", log_metadata)
+
       if local_mode
         ::QueueBus::Local.publish(to_publish) # TODO: use different adapters
       else
@@ -71,7 +88,14 @@ module QueueBus
       to_publish.delete('bus_published_at') unless attributes['bus_published_at'] # will be put on when it actually does it
       to_publish['bus_class_proxy'] = ::QueueBus::Publisher.name.to_s
 
-      ::QueueBus.log_application("Event published:#{event_type} #{to_publish.inspect} publish_at: #{timestamp_or_epoch.to_i}")
+      log_metadata = {
+        event_type: event_type,
+        bus_id: to_publish['bus_id'],
+        publish_at: timestamp_or_epoch.to_i,
+        event_attributes: attributes
+      }
+      ::QueueBus.log_application("Event scheduled for publication: #{event_type}", log_metadata)
+
       delayed_enqueue_to(timestamp_or_epoch.to_i, incoming_queue, ::QueueBus::Worker, to_publish)
     end
 

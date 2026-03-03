@@ -180,6 +180,49 @@ end
 
 The previous values will be restored after the block exits.
 
+### Unified Logging Framework
+
+Queue-bus now includes a unified logging framework with structured JSON logging and telemetry context tracking for distributed tracing. This feature is opt-in and fully backwards compatible.
+
+#### Enable Structured JSON Logging
+
+```ruby
+# Enable structured logging (outputs JSON format)
+QueueBus.structured_logging = true
+QueueBus.service_name = 'my-service'
+QueueBus.environment = 'production'
+QueueBus.log_version = '1.0.0'
+QueueBus.reset_logger!
+```
+
+#### Telemetry Context for Distributed Tracing
+
+```ruby
+# Set telemetry context (request ID, user ID, etc.)
+QueueBus.set_telemetry_context(
+  request_id: 'req-123',
+  user_id: 'user-456',
+  session_id: 'session-789',
+  trace_id: 'trace-abc'
+)
+
+# Publish events - context is automatically included
+QueueBus.publish('user_updated', user_id: 42)
+
+# Use context in a block scope
+QueueBus.with_telemetry_context(request_id: 'req-999') do
+  QueueBus.publish('action_performed', action: 'login')
+end
+```
+
+The telemetry context is automatically:
+- Injected into published events
+- Preserved across async operations
+- Restored in workers processing events
+- Included in all log entries
+
+See [LOGGING.md](LOGGING.md) for complete documentation and examples.
+
 ### TODO
 
 * Replace local modes with adapters

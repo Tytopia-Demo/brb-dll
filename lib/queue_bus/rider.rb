@@ -15,7 +15,15 @@ module QueueBus
 
       attributes ||= {}
 
-      ::QueueBus.log_worker("Rider received: #{app_key} #{sub_key} #{attributes.inspect}")
+      log_metadata = {
+        app_key: app_key,
+        subscription_key: sub_key,
+        event_type: attributes['bus_event_type'],
+        bus_id: attributes['bus_id'],
+        published_at: attributes['bus_published_at'],
+        driven_at: attributes['bus_driven_at']
+      }
+      ::QueueBus.log_worker('Rider executing subscription', log_metadata)
 
       # attributes that should be available
       # attributes["bus_event_type"]
