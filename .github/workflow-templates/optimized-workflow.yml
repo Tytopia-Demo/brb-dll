@@ -1,0 +1,72 @@
+# Optimized Workflow Template
+# This template follows runner optimization best practices
+# See .github/RUNNER_GUIDELINES.md for detailed guidance
+
+name: Template Workflow
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  # Example: Lightweight job (linting, security scanning)
+  lightweight-job:
+    runs-on: ubuntu-latest  # 2-core, 7GB RAM
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Log system resources (start)
+        run: |
+          echo "=== Resource Monitoring ==="
+          echo "CPU cores: $(nproc)"
+          free -h
+          echo "=========================="
+
+      # Add your workflow steps here
+
+      - name: Log system resources (end)
+        if: always()
+        run: |
+          echo "=== Final Resources ==="
+          free -h
+          df -h
+          echo "======================="
+
+  # Example: Medium-intensity job (testing with parallelization)
+  medium-job:
+    runs-on: ubuntu-latest-4-core  # 4-core, 16GB RAM
+    timeout-minutes: 30
+    strategy:
+      matrix:
+        version: [1.0, 2.0]
+      max-parallel: 2
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Monitor resources
+        run: |
+          echo "CPU: $(nproc), Memory:"
+          free -h
+
+      # Add your workflow steps here
+
+      - name: Final resource check
+        if: always()
+        run: free -h
+
+  # Example: Job with dependency
+  deploy:
+    needs: [lightweight-job, medium-job]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Add deployment steps here
