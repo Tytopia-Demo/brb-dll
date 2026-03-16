@@ -23,7 +23,10 @@ namespace :queuebus do
     else
       manager = ::QueueBus::TaskManager.new(true)
       count = manager.unsubscribe!
-      puts "No subscriptions unsubscribed" if count == 0
+      if count == 0
+        ::QueueBus.log_warn('No subscriptions unsubscribed')
+        puts "No subscriptions unsubscribed"
+      end
     end
   end
 
@@ -31,6 +34,7 @@ namespace :queuebus do
   task queues: [:preload] do
     manager = ::QueueBus::TaskManager.new(false)
     queues = manager.queue_names + ['bus_incoming']
+    ::QueueBus.log_application('Listing queue names', queue_count: queues.size, queues: queues)
     puts queues.join(', ')
   end
 
@@ -43,6 +47,7 @@ namespace :queuebus do
     scheduled_text_list = scheduled_list.collect do |e|
       [e.key, e.matcher.filters['hour'] || '*', e.matcher.filters['minute'] || '*']
     end
+    ::QueueBus.log_application('Listing scheduled subscriptions', scheduled_count: scheduled_list.size)
     puts 'key, hour, minute'
     puts scheduled_text_list.sort_by { |(_, hour, minute)| [hour.to_i, minute.to_i] }.map(&:to_csv)
   end

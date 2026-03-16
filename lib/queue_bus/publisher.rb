@@ -8,7 +8,15 @@ module QueueBus
     class << self
       def perform(attributes)
         event_type = attributes['bus_event_type']
-        ::QueueBus.log_worker("Publisher running: #{event_type} - #{attributes.inspect}")
+        correlation_id = attributes['bus_id']
+
+        ::QueueBus.log_worker(
+          'Publisher executing delayed publish',
+          event_type: event_type,
+          correlation_id: correlation_id,
+          delayed_until: attributes['bus_delayed_until']
+        )
+
         ::QueueBus.publish(event_type, attributes)
       end
     end

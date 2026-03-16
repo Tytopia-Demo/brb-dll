@@ -14,8 +14,17 @@ module QueueBus
       raise 'No subcription key passed' if sub_key.to_s == ''
 
       attributes ||= {}
+      event_type = attributes['bus_event_type']
+      correlation_id = attributes['bus_id']
 
-      ::QueueBus.log_worker("Rider received: #{app_key} #{sub_key} #{attributes.inspect}")
+      ::QueueBus.log_worker(
+        'Rider executing subscription',
+        event_type: event_type,
+        correlation_id: correlation_id,
+        app_key: app_key,
+        subscription_key: sub_key,
+        queue_name: attributes['bus_rider_queue']
+      )
 
       # attributes that should be available
       # attributes["bus_event_type"]
@@ -24,8 +33,20 @@ module QueueBus
       # attributes["bus_driven_at"]
 
       # (now running with the real app that subscribed)
-      ::QueueBus.dispatcher_execute(app_key, sub_key,
-                                    attributes.merge('bus_executed_at' => Time.now.to_i))
+      begin
+        ::QueueBus.dispatcher_execute(app_key, sub_key,
+                                      attributes.merge('bus_executed_at' => Time.now.to_i))
+      rescue StandardError => e
+        ::QueueBus.log_error(
+          'Error executing subscription',
+          error: e,
+          event_type: event_type,
+          correlation_id: correlation_id,
+          app_key: app_key,
+          subscription_key: sub_key
+        )
+        raise
+      end
     end
   end
 end

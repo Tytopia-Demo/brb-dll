@@ -57,7 +57,14 @@ module QueueBus
     def publish(event_type, attributes = {})
       to_publish = publish_metadata(event_type, attributes)
 
-      ::QueueBus.log_application("Event published: #{event_type} #{to_publish.inspect}")
+      ::QueueBus.log_application(
+        'Event published',
+        event_type: event_type,
+        correlation_id: to_publish['bus_id'],
+        local_mode: local_mode || false,
+        hostname: to_publish['bus_app_hostname']
+      )
+
       if local_mode
         ::QueueBus::Local.publish(to_publish) # TODO: use different adapters
       else
@@ -71,7 +78,14 @@ module QueueBus
       to_publish.delete('bus_published_at') unless attributes['bus_published_at'] # will be put on when it actually does it
       to_publish['bus_class_proxy'] = ::QueueBus::Publisher.name.to_s
 
-      ::QueueBus.log_application("Event published:#{event_type} #{to_publish.inspect} publish_at: #{timestamp_or_epoch.to_i}")
+      ::QueueBus.log_application(
+        'Event scheduled for delayed publish',
+        event_type: event_type,
+        correlation_id: to_publish['bus_id'],
+        delayed_until: timestamp_or_epoch.to_i,
+        delay_seconds: timestamp_or_epoch.to_i - Time.now.to_i
+      )
+
       delayed_enqueue_to(timestamp_or_epoch.to_i, incoming_queue, ::QueueBus::Worker, to_publish)
     end
 

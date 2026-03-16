@@ -16,29 +16,33 @@ module QueueBus
         next if subscriptions.empty?
 
         count += subscriptions.size
-        log "Subscribing #{dispatcher.app_key} to #{subscriptions.size} subscriptions"
+        log(
+          'Subscribing application to event bus',
+          app_key: dispatcher.app_key,
+          subscription_count: subscriptions.size
+        )
         app = ::QueueBus::Application.new(dispatcher.app_key)
         app.subscribe(subscriptions, logging)
-        log '  ...done'
+        log('Subscription complete', app_key: dispatcher.app_key)
       end
       count
     end
 
     def unsubscribe_queue!(app_key, queue)
-      log "Unsubcribing #{queue} from #{app_key}"
+      log('Unsubscribing queue from application', app_key: app_key, queue_name: queue)
       app = ::QueueBus::Application.new(app_key)
       app.unsubscribe_queue(queue)
-      log "  ...done"
+      log('Unsubscribe complete', app_key: app_key, queue_name: queue)
     end
 
     def unsubscribe!
       count = 0
       ::QueueBus.dispatchers.each do |dispatcher|
-        log "Unsubcribing from #{dispatcher.app_key}"
+        log('Unsubscribing application from event bus', app_key: dispatcher.app_key)
         app = ::QueueBus::Application.new(dispatcher.app_key)
         app.unsubscribe
         count += 1
-        log '  ...done'
+        log('Unsubscribe complete', app_key: dispatcher.app_key)
       end
     end
 
@@ -54,8 +58,15 @@ module QueueBus
       queues.uniq
     end
 
-    def log(message)
-      puts(message) if logging
+    def log(message, **metadata)
+      return unless logging
+
+      if ::QueueBus.use_json_logging?
+        ::QueueBus.log_application(message, **metadata)
+      else
+        # Fallback to puts for compatibility
+        puts(message)
+      end
     end
   end
 end

@@ -6,8 +6,7 @@ require 'logger'
 module QueueBus
   # This class contains all the configuration for a running queue bus application.
   class Config
-    attr_accessor :default_queue, :hostname, :incoming_queue, :logger
-
+    attr_accessor :default_queue, :hostname, :incoming_queue
     attr_reader :worker_middleware_stack
     attr_writer :local_mode, :context
 
@@ -15,7 +14,48 @@ module QueueBus
       @worker_middleware_stack = QueueBus::Middleware::Stack.new
       @incoming_queue = 'bus_incoming'
       @hostname = Socket.gethostname
+      @use_json_logging = true
+      @logger = nil
     end
+
+    # Enable or disable JSON structured logging
+    attr_writer :use_json_logging
+
+    def use_json_logging?
+      @use_json_logging
+    end
+
+    # Set the logger instance
+    def logger=(logger_instance)
+      @logger = logger_instance
+    end
+
+    # Get the logger instance, creating a default JSON logger if none is set
+    def logger
+      @logger ||= create_default_logger
+    end
+
+    private
+
+    def create_default_logger
+      if @use_json_logging
+        require 'queue_bus/json_logger'
+        JsonLoggerAdapter.new($stdout, level: default_log_level)
+      else
+        Logger.new($stdout, level: default_log_level)
+      end
+    end
+
+    def default_log_level
+      env = ENV['RACK_ENV'] || ENV['RAILS_ENV'] || 'development'
+      if env == 'production'
+        defined?(JsonLogger) ? JsonLogger::LogLevel::INFO : Logger::INFO
+      else
+        defined?(JsonLogger) ? JsonLogger::LogLevel::DEBUG : Logger::DEBUG
+      end
+    end
+
+    public
 
     # A wrapper that is always "truthy" but can contain an inner value. This is useful for
     # checking that a thread local variable is set to a value, even if that value happens to
@@ -110,12 +150,26 @@ module QueueBus
       @before_publish_callback&.call(attributes)
     end
 
-    def log_application(message)
-      logger&.info(message)
+    def log_application(message, **metadata)
+      logger.info(message, **metadata)
     end
 
-    def log_worker(message)
-      logger&.debug(message)
+    def log_worker(message, **metadata)
+      logger.debug(message, **metadata)
+    end
+
+    def log_error(message, error: nil, **metadata)
+      metadata[:error] = error if error
+      logger.error(message, **metadata)
+    end
+
+    def log_warn(message, **metadata)
+      logger.warn(message, **metadata)
+    end
+
+    def log_fatal(message, error: nil, **metadata)
+      metadata[:error] = error if error
+      logger.fatal(message, **metadata)
     end
   end
 end

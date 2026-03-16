@@ -12,6 +12,8 @@ module QueueBus
   autoload :Dispatchers,      'queue_bus/dispatchers'
   autoload :Driver,           'queue_bus/driver'
   autoload :Heartbeat,        'queue_bus/heartbeat'
+  autoload :JsonLogger,       'queue_bus/json_logger'
+  autoload :JsonLoggerAdapter, 'queue_bus/json_logger'
   autoload :Local,            'queue_bus/local'
   autoload :Matcher,          'queue_bus/matcher'
   autoload :Middleware,       'queue_bus/middleware'
@@ -40,6 +42,8 @@ module QueueBus
                    :local_mode=, :local_mode, :with_local_mode,
                    :before_publish=, :before_publish_callback,
                    :logger=, :logger, :log_application, :log_worker,
+                   :log_error, :log_warn, :log_fatal,
+                   :use_json_logging=, :use_json_logging?,
                    :hostname=, :hostname,
                    :adapter=, :adapter, :has_adapter?,
                    :incoming_queue=, :incoming_queue,
