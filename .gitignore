@@ -3,3 +3,33 @@
 Gemfile.lock
 pkg/*
 .DS_Store
+
+# Ruby / Bundler
+*.rbc
+*.sassc
+.sass-cache
+capybara-*.html
+rerun.txt
+
+# RDoc / YARD documentation
+doc/
+rdoc/
+.yardoc/
+_yardoc/
+
+# Test coverage
+coverage/
+
+# Temporary files
+tmp/
+*.log
+
+# RuboCop remote config cache
+.rubocop-https?--*
+
+# OS artifacts
+Thumbs.db
+
+# Editor / IDE
+.idea/
+.vscode/
